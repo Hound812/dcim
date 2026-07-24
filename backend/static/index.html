@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>DCIM - Добавление оборудования</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f2f4f7;margin:0}
+.container{display:flex;gap:20px;padding:20px}
+.card{background:#fff;border-radius:8px;padding:20px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.form{width:420px}
+.rack{flex:1}
+label{display:block;margin-top:12px;font-weight:bold}
+input,select,button{width:100%;padding:8px;margin-top:4px;box-sizing:border-box}
+button{margin-top:20px;background:#1976d2;color:#fff;border:none;cursor:pointer}
+button:hover{background:#125aa3}
+#status{margin-top:15px;font-weight:bold}
+.unit{display:flex;border-bottom:1px solid #ddd;padding:3px 0}
+.num{width:40px;font-weight:bold}
+.dev{flex:1}
+.occ{background:#dcedc8}
+.free{background:#fafafa}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="card form">
+<h2>Добавление оборудования</h2>
+
+<label>Контракт</label>
+<select id="contract"></select>
+
+<label>Производитель</label>
+<input id="vendor">
+
+<label>Модель</label>
+<input id="model">
+
+<label>Серийный номер</label>
+<input id="serial">
+
+<label>Высота (U)</label>
+<input id="size" type="number" value="1" min="1">
+
+<label>Стойка</label>
+<select id="rack" onchange="loadRack()"></select>
+
+<label>Верхний юнит</label>
+<input id="top" type="number" value="1">
+
+<button onclick="addEquipment()">Добавить оборудование</button>
+
+<div id="status"></div>
+</div>
+
+<div class="card rack">
+<h2 id="rackTitle">Стойка</h2>
+<div id="layout"></div>
+</div>
+</div>
+
+<script>
+const API="";
+
+async function loadContracts(){
+ let r=await fetch(API+"/api/contracts");
+ let data=await r.json();
+ let s=document.getElementById("contract");
+ s.innerHTML="";
+ data.forEach(c=>{
+   let o=document.createElement("option");
+   o.value=c.id;
+   o.textContent=c.name||c.contract_name||("Договор "+c.id);
+   s.appendChild(o);
+ });
+}
+
+async function loadRacks(){
+ let r=await fetch(API+"/api/racks");
+ let data=await r.json();
+ let s=document.getElementById("rack");
+ s.innerHTML="";
+ data.forEach(x=>{
+   let o=document.createElement("option");
+   o.value=x.id;
+   o.textContent=x.name||x.rack_number||("Стойка "+x.id);
+   s.appendChild(o);
+ });
+ if(data.length) loadRack();
+}
+
+async function loadRack(){
+ let id=document.getElementById("rack").value;
+ if(!id) return;
+ let r=await fetch(API+"/api/racks/"+id+"/layout");
+ let data=await r.json();
+
+ document.getElementById("rackTitle").textContent="Стойка "+id;
+ let div=document.getElementById("layout");
+ div.innerHTML="";
+
+ data.units.forEach(u=>{
+   let row=document.createElement("div");
+   row.className="unit "+(u.equipment_id?"occ":"free");
+   row.innerHTML="<div class='num'>"+u.unit+
+      "</div><div class='dev'>"+
+      (u.vendor?u.vendor+" "+u.model+" ("+u.serial_number+")":"")+
+      "</div>";
+   div.appendChild(row);
+ });
+}
+
+async function addEquipment(){
+
+ const body={
+   contract_id:Number(document.getElementById("contract").value),
+   vendor:document.getElementById("vendor").value,
+   model:document.getElementById("model").value,
+   serial_number:document.getElementById("serial").value,
+   size_u:Number(document.getElementById("size").value),
+   rack_id:Number(document.getElementById("rack").value),
+   top_unit:Number(document.getElementById("top").value)
+ };
+
+ let status=document.getElementById("status");
+
+ try{
+   let r=await fetch(API+"/api/equipment",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body)
+   });
+
+   if(r.ok){
+      status.style.color="green";
+      status.textContent="✓ Оборудование успешно добавлено";
+      loadRack();
+   }else{
+      let t=await r.text();
+      status.style.color="red";
+      status.textContent=t;
+   }
+ }catch(e){
+   status.style.color="red";
+   status.textContent=e;
+ }
+}
+
+loadContracts();
+loadRacks();
+</script>
+</body>
+</html>
