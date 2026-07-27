@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.routers import (
     clients,
@@ -9,34 +9,31 @@ from app.routers import (
     racks,
     equipment,
     placement,
-    history
+    history,
 )
 
 app = FastAPI(
     title="DCIM API",
     description="Data Center Infrastructure Management",
-    version="1.0.0"
+    version="1.0.0",
 )
 
-# Подключаем папку со статическими файлами
-app.mount("/static", StaticFiles(directory="/opt/inventory/backend/static"), name="static")
+STATIC_DIR = "/opt/inventory/backend/static"
 
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# Главная страница
 @app.get("/", include_in_schema=False)
 def root():
-    return FileResponse("/opt/inventory/backend/static/index.html")
+    return FileResponse(f"{STATIC_DIR}/index.html")
 
+@app.get("/equipment/add", include_in_schema=False)
+def equipment_add_page():
+    return FileResponse(f"{STATIC_DIR}/add_equipment.html")
 
-# Проверка работоспособности API
 @app.get("/health")
 def health():
-    return {
-        "status": "ok"
-    }
+    return {"status": "ok"}
 
-
-# Подключение роутеров
 app.include_router(clients.router)
 app.include_router(contracts.router)
 app.include_router(rooms.router)
